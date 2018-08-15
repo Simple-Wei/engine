@@ -1,4 +1,4 @@
-pc.extend(pc, function () {
+Object.assign(pc, function () {
 
     /**
      * @private
@@ -7,11 +7,12 @@ pc.extend(pc, function () {
      * @classdesc A Depth material is for rendering linear depth values to a render target.
      */
     var DepthMaterial = function () {
+        pc.Material.call(this);
     };
+    DepthMaterial.prototype = Object.create(pc.Material.prototype);
+    DepthMaterial.prototype.constructor = DepthMaterial;
 
-    DepthMaterial = pc.inherits(DepthMaterial, pc.Material);
-
-    pc.extend(DepthMaterial.prototype, {
+    Object.assign(DepthMaterial.prototype, {
         /**
          * @private
          * @function

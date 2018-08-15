@@ -1,21 +1,5 @@
-pc.extend(pc, function () {
+Object.assign(pc, function () {
     var _schema = ['enabled'];
-
-    var nineSliceBasePS = [
-        "varying vec2 vMask;",
-        "varying vec2 vTiledUv;",
-        "uniform vec4 innerOffset;",
-        "uniform vec2 outerScale;",
-        "uniform vec4 atlasRect;",
-        "vec2 nineSlicedUv;"
-    ].join('\n');
-
-    var nineSliceUvPs = [
-        "vec2 tileMask = step(vMask, vec2(0.99999));",
-        "vec2 clampedUv = mix(innerOffset.xy*0.5, vec2(1.0) - innerOffset.zw*0.5, fract(vTiledUv));",
-        "clampedUv = clampedUv * atlasRect.zw + atlasRect.xy;",
-        "nineSlicedUv = vUv0 * tileMask + clampedUv * (vec2(1.0) - tileMask);"
-    ].join('\n');
 
     /**
      * @constructor
@@ -25,6 +9,8 @@ pc.extend(pc, function () {
      * @extends pc.ComponentSystem
      */
     var ElementComponentSystem = function ElementComponentSystem(app) {
+        pc.ComponentSystem.call(this, app);
+
         this.id = 'element';
         this.app = app;
         app.systems.add(this.id, this);
@@ -44,9 +30,6 @@ pc.extend(pc, function () {
         pixelData[3] = 255.0;
         pixels.set(pixelData);
         this._defaultTexture.unlock();
-
-
-        this._maskMaterials = {}; // cache for materials that mask elements
 
         this.defaultImageMaterial = new pc.StandardMaterial();
         this.defaultImageMaterial.diffuse.set(0, 0, 0); // black diffuse color to prevent ambient light being included
@@ -76,24 +59,17 @@ pc.extend(pc, function () {
 
         // 9 sliced material is like the default but with custom chunks
         this.defaultImage9SlicedMaterial = this.defaultImageMaterial.clone();
-        this.defaultImage9SlicedMaterial.chunks.basePS = pc.shaderChunks.basePS + nineSliceBasePS;
-        this.defaultImage9SlicedMaterial.chunks.startPS = pc.shaderChunks.startPS + "nineSlicedUv = vUv0;\n";
-        this.defaultImage9SlicedMaterial.chunks.emissivePS = pc.shaderChunks.emissivePS.replace("$UV", "nineSlicedUv");
-        this.defaultImage9SlicedMaterial.chunks.opacityPS = pc.shaderChunks.opacityPS.replace("$UV", "nineSlicedUv");
-        this.defaultImage9SlicedMaterial.chunks.transformVS = "#define NINESLICED\n" + pc.shaderChunks.transformVS;
-        this.defaultImage9SlicedMaterial.chunks.uv0VS = pc.shaderChunks.uv9SliceVS;
+        this.defaultImage9SlicedMaterial.nineSlicedMode = pc.SPRITE_RENDERMODE_SLICED;
         this.defaultImage9SlicedMaterial.update();
 
         // 9-sliced in tiled mode
         this.defaultImage9TiledMaterial = this.defaultImage9SlicedMaterial.clone();
-        this.defaultImage9TiledMaterial.chunks.basePS = pc.shaderChunks.basePS + "#define NINESLICETILED\n" + nineSliceBasePS;
-        this.defaultImage9TiledMaterial.chunks.startPS = pc.shaderChunks.startPS + nineSliceUvPs;
-        this.defaultImage9TiledMaterial.chunks.emissivePS = pc.shaderChunks.emissivePS.replace("$UV", "nineSlicedUv, -1000.0");
-        this.defaultImage9TiledMaterial.chunks.opacityPS = pc.shaderChunks.opacityPS.replace("$UV", "nineSlicedUv, -1000.0");
+        this.defaultImage9TiledMaterial.nineSlicedMode = pc.SPRITE_RENDERMODE_TILED;
         this.defaultImage9TiledMaterial.update();
 
         // 9 sliced mask
         this.defaultImage9SlicedMaskMaterial = this.defaultImage9SlicedMaterial.clone();
+        this.defaultImage9SlicedMaskMaterial.nineSlicedMode = pc.SPRITE_RENDERMODE_SLICED;
         this.defaultImage9SlicedMaskMaterial.alphaTest = 1;
         this.defaultImage9SlicedMaskMaterial.redWrite = false;
         this.defaultImage9SlicedMaskMaterial.greenWrite = false;
@@ -103,6 +79,7 @@ pc.extend(pc, function () {
 
         // 9 sliced tiled mask
         this.defaultImage9TiledMaskMaterial = this.defaultImage9TiledMaterial.clone();
+        this.defaultImage9TiledMaskMaterial.nineSlicedMode = pc.SPRITE_RENDERMODE_TILED;
         this.defaultImage9TiledMaskMaterial.alphaTest = 1;
         this.defaultImage9TiledMaskMaterial.redWrite = false;
         this.defaultImage9TiledMaskMaterial.greenWrite = false;
@@ -117,19 +94,18 @@ pc.extend(pc, function () {
 
         // 9 sliced screen space
         this.defaultScreenSpaceImage9SlicedMaterial = this.defaultImage9SlicedMaterial.clone();
+        this.defaultScreenSpaceImage9SlicedMaterial.nineSlicedMode = pc.SPRITE_RENDERMODE_SLICED;
         this.defaultScreenSpaceImage9SlicedMaterial.depthTest = false;
         this.defaultScreenSpaceImage9SlicedMaterial.update();
 
         // screen space 9-sliced in tiled mode
         this.defaultScreenSpaceImage9TiledMaterial = this.defaultScreenSpaceImage9SlicedMaterial.clone();
-        this.defaultScreenSpaceImage9TiledMaterial.chunks.basePS = pc.shaderChunks.basePS + "#define NINESLICETILED\n" + nineSliceBasePS;
-        this.defaultScreenSpaceImage9TiledMaterial.chunks.startPS = pc.shaderChunks.startPS + nineSliceUvPs;
-        this.defaultScreenSpaceImage9TiledMaterial.chunks.emissivePS = pc.shaderChunks.emissivePS.replace("$UV", "nineSlicedUv, -1000.0");
-        this.defaultScreenSpaceImage9TiledMaterial.chunks.opacityPS = pc.shaderChunks.opacityPS.replace("$UV", "nineSlicedUv, -1000.0");
+        this.defaultScreenSpaceImage9TiledMaterial.nineSlicedMode = pc.SPRITE_RENDERMODE_TILED;
         this.defaultScreenSpaceImage9TiledMaterial.update();
 
         // 9 sliced screen space mask
         this.defaultScreenSpaceImageMask9SlicedMaterial = this.defaultScreenSpaceImage9SlicedMaterial.clone();
+        this.defaultScreenSpaceImageMask9SlicedMaterial.nineSlicedMode = pc.SPRITE_RENDERMODE_SLICED;
         this.defaultScreenSpaceImageMask9SlicedMaterial.alphaTest = 1;
         this.defaultScreenSpaceImageMask9SlicedMaterial.redWrite = false;
         this.defaultScreenSpaceImageMask9SlicedMaterial.greenWrite = false;
@@ -139,6 +115,7 @@ pc.extend(pc, function () {
 
         // 9 sliced tiled screen space mask
         this.defaultScreenSpaceImageMask9TiledMaterial = this.defaultScreenSpaceImage9TiledMaterial.clone();
+        this.defaultScreenSpaceImageMask9TiledMaterial.nineSlicedMode = pc.SPRITE_RENDERMODE_TILED;
         this.defaultScreenSpaceImageMask9TiledMaterial.alphaTest = 1;
         this.defaultScreenSpaceImageMask9TiledMaterial.redWrite = false;
         this.defaultScreenSpaceImageMask9TiledMaterial.greenWrite = false;
@@ -189,11 +166,12 @@ pc.extend(pc, function () {
 
         this.on('beforeremove', this.onRemoveComponent, this);
     };
-    ElementComponentSystem = pc.inherits(ElementComponentSystem, pc.ComponentSystem);
+    ElementComponentSystem.prototype = Object.create(pc.ComponentSystem.prototype);
+    ElementComponentSystem.prototype.constructor = ElementComponentSystem;
 
     pc.Component._buildAccessors(pc.ElementComponent.prototype, _schema);
 
-    pc.extend(ElementComponentSystem.prototype, {
+    Object.assign(ElementComponentSystem.prototype, {
         initializeComponentData: function (component, data, properties) {
             if (data.anchor !== undefined) {
                 if (data.anchor instanceof pc.Vec4) {
@@ -248,13 +226,13 @@ pc.extend(pc, function () {
 
             var shouldForceSetAnchor = false;
 
-            if (data.width !== undefined && ! splitHorAnchors) {
+            if (data.width !== undefined && !splitHorAnchors) {
                 // force update
                 component.width = data.width;
             } else if (splitHorAnchors) {
                 shouldForceSetAnchor = true;
             }
-            if (data.height !== undefined && ! splitVerAnchors) {
+            if (data.height !== undefined && !splitVerAnchors) {
                 // force update
                 component.height = data.height;
             } else if (splitVerAnchors) {
@@ -362,7 +340,7 @@ pc.extend(pc, function () {
                 component._updateScreen(result.screen);
             }
 
-            ElementComponentSystem._super.initializeComponentData.call(this, component, data, properties);
+            pc.ComponentSystem.prototype.initializeComponentData.call(this, component, data, properties);
         },
 
         onRemoveComponent: function (entity, component) {

@@ -1,4 +1,4 @@
-pc.extend(pc, function () {
+Object.assign(pc, function () {
     'use strict';
 
     var PARAMETER_TYPES = {
@@ -122,6 +122,9 @@ pc.extend(pc, function () {
         lightMap: 'white'
     };
 
+    /* eslint-disable no-invalid-this */
+    // onCubemapAssetLoad is used as an event handler with the material passed in as scope
+    // eslint doesn't like us using "this" in a function that is not a class method
     var onCubemapAssetLoad = function (asset, attribute, newValue, oldValue) {
         var props = [
             'cubeMap',
@@ -140,6 +143,7 @@ pc.extend(pc, function () {
 
         this.update();
     };
+    /* eslint-enable */
 
     var MaterialHandler = function (app) {
         this._assets = app.assets;
@@ -148,10 +152,10 @@ pc.extend(pc, function () {
         this._createPlaceholders();
     };
 
-    MaterialHandler.prototype = {
+    Object.assign(MaterialHandler.prototype, {
         load: function (url, callback) {
             // Loading from URL (engine-only)
-            pc.http.get(url, function(err, response) {
+            pc.http.get(url, function (err, response) {
                 if (!err) {
                     if (callback) {
                         callback(null, response);
@@ -182,7 +186,7 @@ pc.extend(pc, function () {
 
         // creates placeholders for textures
         // that are used while texture is loading
-        _createPlaceholders: function() {
+        _createPlaceholders: function () {
             var textures = {
                 white: [255, 255, 255, 255],
                 gray: [128, 128, 128, 255],
@@ -191,7 +195,7 @@ pc.extend(pc, function () {
             };
 
             for (var key in textures) {
-                if (! textures.hasOwnProperty(key))
+                if (!textures.hasOwnProperty(key))
                     continue;
 
                 // create texture
@@ -291,7 +295,7 @@ pc.extend(pc, function () {
                 var id;
 
                 if (param.type === 'texture') {
-                    if (! material._assetHandlers)
+                    if (!material._assetHandlers)
                         material._assetHandlers = { };
 
                     // asset handler
@@ -321,14 +325,14 @@ pc.extend(pc, function () {
                         handler = material._assetHandlers[param.name] = {
                             id: id,
                             url: pathMapping ? pc.path.join(dir, param.data) : '',
-                            bind: function(asset) {
+                            bind: function (asset) {
                                 // TODO
                                 // update specific param instead of all of them
                                 data.parameters[i].data = asset.resource;
                                 material[data.parameters[i].name] = asset.resource;
                                 material.update();
                             },
-                            add: function(asset) {
+                            add: function (asset) {
                                 assets.load(asset);
                             },
                             remove: function (asset) {
@@ -366,7 +370,7 @@ pc.extend(pc, function () {
                         } else if (pathMapping) {
                             assets.once('add:url:' + handler.url, handler.add);
                         }
-                    } else if (handler && ! param.data) {
+                    } else if (handler && !param.data) {
                         // unbind events
                         assets.off('load:' + handler.id, handler.bind);
                         assets.off('add:' + handler.id, handler.add);
@@ -385,15 +389,7 @@ pc.extend(pc, function () {
                         asset = assets.get(param.data);
                     }
 
-                    var onAdd = function(asset) {
-                        if (data.shadingModel === pc.SPECULAR_PHONG)
-                            asset.loadFaces = true;
-
-                        asset.ready(onReady);
-                        assets.load(asset);
-                    };
-
-                    var onReady = function(asset) {
+                    var onReady = function (asset) {
                         param.data = asset.resource;
                         // if this is a prefiltered map, then extra resources are present
                         if (asset.resources.length > 1) {
@@ -428,6 +424,14 @@ pc.extend(pc, function () {
                         asset.on('load', onCubemapAssetLoad, material);
                     };
 
+                    var onAdd = function (asset) {
+                        if (data.shadingModel === pc.SPECULAR_PHONG)
+                            asset.loadFaces = true;
+
+                        asset.ready(onReady);
+                        assets.load(asset);
+                    };
+
                     if (asset) {
                         onAdd(asset);
                     } else if (id) {
@@ -451,7 +455,7 @@ pc.extend(pc, function () {
 
             material.init(data);
         }
-    };
+    });
 
     return {
         MaterialHandler: MaterialHandler,

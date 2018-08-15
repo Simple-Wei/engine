@@ -1,4 +1,4 @@
-pc.extend(pc, function () {
+Object.assign(pc, function () {
 
     /**
      * @constructor
@@ -22,16 +22,18 @@ pc.extend(pc, function () {
      * @extends pc.Material
      */
     var BasicMaterial = function () {
+        pc.Material.call(this);
+
         this.color = new pc.Color(1, 1, 1, 1);
         this.colorMap = null;
         this.vertexColors = false;
 
         this.update();
     };
+    BasicMaterial.prototype = Object.create(pc.Material.prototype);
+    BasicMaterial.prototype.constructor = BasicMaterial;
 
-    BasicMaterial = pc.inherits(BasicMaterial, pc.Material);
-
-    pc.extend(BasicMaterial.prototype, {
+    Object.assign(BasicMaterial.prototype, {
         /**
          * @function
          * @name pc.BasicMaterial#clone
